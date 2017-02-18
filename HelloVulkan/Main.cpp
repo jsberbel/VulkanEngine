@@ -44,8 +44,26 @@ inline void checkValidationLayerSupport()
 			}
 		}
 
-		assert(layerFound, "VK: Validation layers requested, but not available.");
+		assert(layerFound);
 	}
+}
+
+std::vector<const char*> getRequiredExtensions(){
+	std::vector<const char*> extensions;
+
+	unsigned int glfwExtensionCount = 0;
+	const char** glfwExtensions;
+	glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+
+	for (unsigned int i = 0; i < glfwExtensionCount; i++) {
+		extensions.push_back(glfwExtensions[i]);
+	}
+
+	#ifdef _DEBUG
+	extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+	#endif
+
+	return extensions;
 }
 
 int __stdcall WinMain(__in HINSTANCE hInstance, __in_opt HINSTANCE hPrevInstance, __in_opt LPSTR lpCmdLine, __in int nShowCmd)
@@ -60,8 +78,7 @@ int __stdcall WinMain(__in HINSTANCE hInstance, __in_opt HINSTANCE hPrevInstance
 		assert((s_window = glfwCreateWindow(WIDTH, HEIGHT,	// Window dimensions
 											"Hello Vulkan", // Window title
 											nullptr,		// Monitor to open a window
-											nullptr)),		// OpenGL only
-			   "GLFW: Failed to create window instance.");
+											nullptr)));		// OpenGL only
 	}
 
 	// INIT VULKAN
@@ -76,28 +93,26 @@ int __stdcall WinMain(__in HINSTANCE hInstance, __in_opt HINSTANCE hPrevInstance
 		appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);			// The developer-supplied version number of the engine
 		appInfo.apiVersion = VK_API_VERSION_1_0;					// The version of the Vulkan API against which the application expects to run
 
-		unsigned int glfwExtensionCount{ 0 };
-		const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount); // Vulkan instance extensions required by GLFW
-
 		VkInstanceCreateInfo createInfo{}; // Structure specifying parameters of a newly created instance
 		createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;	// Type of the structure
-		createInfo.pApplicationInfo = &appInfo;						// The pointer to an instance of VkApplicationInfo
-		createInfo.enabledExtensionCount = glfwExtensionCount;		// The number of global extensions to enable
-		createInfo.ppEnabledExtensionNames = glfwExtensions;		// The names of extensions to enable
-		createInfo.enabledLayerCount = 0;							// the number of global layers to enable
+		createInfo.pApplicationInfo = &appInfo;						// The pointer to an instance of VkApplicationInfo			
+		
+		std::vector<const char*> extensions{ getRequiredExtensions() };
+		createInfo.enabledExtensionCount = extensions.size(); // The names of extensions to enable
+		createInfo.ppEnabledLayerNames = extensions.data(); // The names of extensions to enable
 
 		#ifdef _DEBUG
-		createInfo.enabledLayerCount = validationLayers.size();
-		createInfo.ppEnabledLayerNames = validationLayers.data();
+		createInfo.enabledLayerCount = validationLayers.size(); // The number of global layers to enable
+		createInfo.ppEnabledLayerNames = validationLayers.data(); // The names of extensions to enable
+		#else
+		createInfo.enabledLayerCount = 0;
 		#endif
 
 		VkInstance instance; // Opaque handle to a instance object
 		assert(vkCreateInstance(&createInfo,						// Pointer to struct with creation info
 								nullptr,							// Pointer to custom allocator callbacks
-								&instance) == VK_SUCCESS,			// Pointer to the handle of the instance
-			   "VK: Failed to create Vulkan instance.");
+								&instance) == VK_SUCCESS);			// Pointer to the handle of the instance
 	}
-
 
 	while (!glfwWindowShouldClose(s_window)) // While window is not closed by the user
 		glfwPollEvents(); // Check for events
